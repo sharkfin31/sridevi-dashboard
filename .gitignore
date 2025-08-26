@@ -8,3 +8,4 @@
 .idea/
 .vscode/
 *.swp
+/backend/src/config
