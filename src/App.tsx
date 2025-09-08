@@ -1,37 +1,41 @@
 import { useState, useEffect } from 'react';
 import { AppSidebar, SiteHeader } from './components/layout';
 import { DashboardView } from './components/dashboard/DashboardView';
-import { GoogleCalendar, BookingsView, MaintenanceView } from './components/views';
+import { GoogleCalendar, BookingsView, MaintenanceView, AnalyticsView } from './components/views';
 import { BookingForm, MaintenanceForm } from './components/forms';
-import { EventDetails } from './components/modals';
 import { CalendarEvent, Booking, Maintenance } from './types';
 import { getBookings, getMaintenance } from './lib/notion';
 import { SidebarProvider, SidebarInset } from './components/ui/sidebar';
 import { Button } from './components/ui/button';
 import { Plus, Wrench } from 'lucide-react';
+import { useFeatures } from './hooks/useFeatures';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
-  const [selectedEvent] = useState<CalendarEvent | null>(null);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
-  const [showEventDetails, setShowEventDetails] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { features } = useFeatures();
 
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Loading data...');
       const [bookingsData, maintenanceData] = await Promise.all([
         getBookings(),
         getMaintenance(),
       ]);
 
+      console.log('📊 Loaded bookings:', bookingsData.length, bookingsData);
+      console.log('🔧 Loaded maintenance:', maintenanceData.length, maintenanceData);
+
       setBookings(bookingsData);
       setMaintenance(maintenanceData);
 
+      // Create events for dashboard metrics (not for calendar display)
       const bookingEvents: CalendarEvent[] = bookingsData.map((booking: Booking) => ({
         id: booking.id,
         title: `${booking.customerName} - ${booking.destination}`,
@@ -44,15 +48,16 @@ function App() {
       const maintenanceEvents: CalendarEvent[] = maintenanceData.map((maint: Maintenance) => ({
         id: maint.id,
         title: `Maintenance: ${maint.type}`,
-        start: new Date(maint.scheduledDate),
-        end: new Date(new Date(maint.scheduledDate).getTime() + maint.estimatedDuration * 60 * 60 * 1000),
+        start: new Date(maint.startDate),
+        end: new Date(maint.endDate),
         type: 'maintenance',
         data: maint,
       }));
 
+      console.log('📅 Created events:', [...bookingEvents, ...maintenanceEvents]);
       setEvents([...bookingEvents, ...maintenanceEvents]);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -77,7 +82,7 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardView events={events} />;
+        return <DashboardView events={events} bookings={bookings} />;
       case 'calendar':
         return (
           <div className="bg-card rounded-lg border shadow-lg">
@@ -87,7 +92,19 @@ function App() {
       case 'bookings':
         return <BookingsView />;
       case 'maintenance':
-        return <MaintenanceView maintenance={maintenance} />;
+        return <MaintenanceView maintenance={maintenance} onMaintenanceUpdated={handleDataUpdate} />;
+      case 'analytics':
+        return <AnalyticsView events={events} bookings={bookings} maintenance={maintenance} />;
+      case 'test':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold">Backend Test</h2>
+            <div className="bg-muted p-4 rounded">
+              <p>Backend URL: {import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}</p>
+              <p>Check console for API calls</p>
+            </div>
+          </div>
+        );
       default:
         return <div className="text-center py-8">Coming soon...</div>;
     }
@@ -99,14 +116,18 @@ function App() {
       <SidebarInset>
         <SiteHeader activeTab={activeTab}>
           <div className="flex items-center gap-2 ml-auto">
-            <Button onClick={() => setShowBookingForm(true)} size="sm">
-              <Plus className="h-4 w-4" />
-              New Booking
-            </Button>
-            <Button onClick={() => setShowMaintenanceForm(true)} variant="outline" size="sm">
-              <Wrench className="h-4 w-4" />
-              Schedule Maintenance
-            </Button>
+            {features.ADMIN_MODE && (
+              <>
+                <Button onClick={() => setShowBookingForm(true)} size="sm">
+                  <Plus className="h-4 w-4" />
+                  New Booking
+                </Button>
+                <Button onClick={() => setShowMaintenanceForm(true)} variant="outline" size="sm">
+                  <Wrench className="h-4 w-4" />
+                  Schedule Maintenance
+                </Button>
+              </>
+            )}
           </div>
         </SiteHeader>
         
@@ -117,23 +138,22 @@ function App() {
         </div>
       </SidebarInset>
 
-      <BookingForm
-        open={showBookingForm}
-        onOpenChange={setShowBookingForm}
-        onBookingCreated={handleDataUpdate}
-      />
+      {features.ADMIN_MODE && (
+        <>
+          <BookingForm
+            open={showBookingForm}
+            onOpenChange={setShowBookingForm}
+            onBookingCreated={handleDataUpdate}
+          />
+          <MaintenanceForm
+            open={showMaintenanceForm}
+            onOpenChange={setShowMaintenanceForm}
+            onMaintenanceCreated={handleDataUpdate}
+          />
+        </>
+      )}
 
-      <MaintenanceForm
-        open={showMaintenanceForm}
-        onOpenChange={setShowMaintenanceForm}
-        onMaintenanceCreated={handleDataUpdate}
-      />
 
-      <EventDetails
-        event={selectedEvent}
-        open={showEventDetails}
-        onOpenChange={setShowEventDetails}
-      />
     </SidebarProvider>
   );
 }

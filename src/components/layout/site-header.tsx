@@ -16,6 +16,8 @@ const getHeaderTitle = (activeTab: string) => {
       return 'Booking Management'
     case 'maintenance':
       return 'Maintenance Tracking'
+    case 'analytics':
+      return 'Analytics & Reports'
     default:
       return 'Bus Transport Dashboard'
   }

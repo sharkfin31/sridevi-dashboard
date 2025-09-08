@@ -11,16 +11,21 @@ import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import { Search, Filter, Wrench, Clock, CalendarIcon, X } from 'lucide-react';
 import { Maintenance } from '@/types';
+import { MaintenanceModal } from '@/components/modals/MaintenanceModal';
+import { updateMaintenance } from '@/lib/notion';
 
 interface MaintenanceViewProps {
   maintenance: Maintenance[];
+  onMaintenanceUpdated?: () => void;
 }
 
-export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
+export function MaintenanceView({ maintenance, onMaintenanceUpdated }: MaintenanceViewProps) {
+  const [selectedMaintenance, setSelectedMaintenance] = useState<Maintenance | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   const filteredMaintenance = maintenance.filter((item) => {
@@ -30,9 +35,9 @@ export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
       item.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     let matchesDate = true;
-    if (dateRange && (dateRange.from || dateRange.to) && item.scheduledDate) {
+    if (dateRange && (dateRange.from || dateRange.to) && item.startDate) {
       try {
-        const itemDate = new Date(item.scheduledDate);
+        const itemDate = new Date(item.startDate);
         if (dateRange.from && dateRange.to) {
           matchesDate = itemDate >= dateRange.from && itemDate <= dateRange.to;
         } else if (dateRange.from) {
@@ -47,6 +52,16 @@ export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
+  const handleStatusUpdate = async (maintenanceId: string, newStatus: string) => {
+    try {
+      await updateMaintenance(maintenanceId, { status: newStatus as any });
+      onMaintenanceUpdated?.();
+      setEditingStatus(null);
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
   const totalPages = Math.ceil(filteredMaintenance.length / itemsPerPage);
   const paginatedMaintenance = filteredMaintenance.slice(
     (currentPage - 1) * itemsPerPage,
@@ -57,7 +72,7 @@ export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
     total: maintenance.length,
     scheduled: maintenance.filter((m) => m.status === 'scheduled').length,
     inProgress: maintenance.filter((m) => m.status === 'in-progress').length,
-    completed: maintenance.filter((m) => m.status === 'completed').length,
+    completed: maintenance.filter((m) => m.status === 'done').length,
   };
 
   return (
@@ -159,7 +174,7 @@ export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
                 <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="done">Done</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -168,32 +183,51 @@ export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Bus ID</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Scheduled Date</TableHead>
-                  <TableHead>Duration (hrs)</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Service Type</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Service Dates</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedMaintenance.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.type}</TableCell>
-                    <TableCell>{item.busId}</TableCell>
+                  <TableRow 
+                    key={item.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedMaintenance(item)}
+                  >
+                    <TableCell className="font-medium">{item.busNumber || item.busId}</TableCell>
+                    <TableCell>{item.type}</TableCell>
                     <TableCell>{item.description}</TableCell>
-                    <TableCell>{new Date(item.scheduledDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{item.estimatedDuration}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          item.status === 'completed' ? 'default' : 
-                          item.status === 'in-progress' ? 'secondary' : 
-                          'outline'
-                        }
-                      >
-                        {item.status}
-                      </Badge>
+                    <TableCell>₹{item.cost.toLocaleString()}</TableCell>
+                    <TableCell>{new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {editingStatus === item.id ? (
+                        <Select value={item.status} onValueChange={(value) => handleStatusUpdate(item.id, value)}>
+                          <SelectTrigger className="w-32 h-6">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="in-progress">In Progress</SelectItem>
+                            <SelectItem value="done">Done</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge 
+                          className={
+                            item.status === 'done' ? 'bg-green-100 text-green-800 border-green-200 cursor-pointer' :
+                            item.status === 'in-progress' ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-pointer' :
+                            'bg-gray-100 text-gray-800 border-gray-200 cursor-pointer'
+                          }
+                          onClick={() => setEditingStatus(item.id)}
+                        >
+                          {item.status === 'in-progress' ? 'In Progress' :
+                           item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                        </Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -237,6 +271,15 @@ export function MaintenanceView({ maintenance }: MaintenanceViewProps) {
           )}
         </CardContent>
       </Card>
+
+      <MaintenanceModal
+        maintenance={selectedMaintenance}
+        open={!!selectedMaintenance}
+        onOpenChange={(open) => !open && setSelectedMaintenance(null)}
+        onMaintenanceUpdated={() => {
+          onMaintenanceUpdated?.();
+        }}
+      />
     </div>
   );
 }

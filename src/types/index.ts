@@ -1,35 +1,54 @@
+export interface Vehicle {
+  id: string;
+  busNumber: string;
+  capacity: number;
+  status: 'available' | 'confirmed' | 'maintenance';
+}
+
 export interface Bus {
   id: string;
   number: string;
   capacity: number;
-  status: 'available' | 'booked' | 'maintenance';
+  status: 'available' | 'confirmed' | 'maintenance';
 }
 
 export interface Booking {
   id: string;
-  busId: string;
+  busId: string | string[];
+  busNumber?: string | string[];
   customerName: string;
   customerPhone: string;
+  customerAddress?: string;
   destination: string;
   startDate: Date;
   endDate: Date;
   amount: number;
-  status: 'confirmed' | 'pending' | 'cancelled';
+  advance: number;
+  balance: number;
+  notes?: string;
+  totalKilometers?: number;
+  startOdoReading?: number;
+  endOdoReading?: number;
+  status: 'confirmed' | 'in-tour' | 'pending-payment' | 'complete';
 }
 
 export interface Maintenance {
   id: string;
-  busId: string; // Vehicle relation
-  type: string; // Service Type (multi_select)
-  description: string; // Notes (rich_text)
-  scheduledDate: Date; // Service Date (date)
-  estimatedDuration: number; // Cost (number)
-  status: 'scheduled' | 'in-progress' | 'completed'; // Service Status (status)
-  mileage?: number | null; // Mileage (number)
-  galleries?: string[]; // Galleries (relation)
-  invoice?: string; // Service Invoice (rich_text)
-  contacts?: string[]; // Contacts (relation)
-  name?: string; // Name (title)
+  busId: string;
+  busNumber?: string;
+  type: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  cost: number;
+  status: 'scheduled' | 'in-progress' | 'done';
+  mileage?: number | null;
+  galleries?: string[];
+  invoice?: string;
+  contacts?: string[];
+  name?: string;
+  scheduledDate?: Date;
+  estimatedDuration?: number;
 }
 
 export interface CalendarEvent {

@@ -9,32 +9,51 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
-import { Search, Filter, Calendar as CalendarIcon, DollarSign, Clock, CalendarIcon as CalIcon, X } from 'lucide-react';
+import { Search, Filter, Calendar as CalendarIcon, DollarSign, CalendarIcon as CalIcon, X, Eye } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Booking } from '@/types';
 import { getBookings } from '@/lib/notion';
+import { BookingModal } from '@/components/modals/BookingModal';
+import { updateBooking } from '@/lib/notion';
 
 export function BookingsView() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const itemsPerPage = 10;
 
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      console.log('📊 BookingsView: Loading bookings...');
+      const data = await getBookings();
+      console.log('📊 BookingsView: Loaded bookings:', data.length, data);
+      setBookings(data);
+    } catch (error) {
+      console.error('❌ BookingsView: Error loading bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadBookings = async () => {
-      try {
-        const data = await getBookings();
-        setBookings(data);
-      } catch (error) {
-        console.error('Error loading bookings:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadBookings();
   }, []);
+
+  const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
+    try {
+      await updateBooking(bookingId, { status: newStatus as any });
+      await loadBookings();
+      setEditingStatus(null);
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
@@ -68,8 +87,10 @@ export function BookingsView() {
 
   const bookingStats = {
     total: bookings.length,
-    confirmed: bookings.filter((b) => b.status === 'confirmed').length,
-    pending: bookings.filter((b) => b.status === 'pending').length,
+    booked: bookings.filter((b) => b.status === 'confirmed').length,
+    inTour: bookings.filter((b) => b.status === 'in-tour').length,
+    pendingPayment: bookings.filter((b) => b.status === 'pending-payment').length,
+    complete: bookings.filter((b) => b.status === 'complete').length,
     totalRevenue: bookings.reduce((sum, b) => sum + b.amount, 0),
   };
 
@@ -97,23 +118,23 @@ export function BookingsView() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
-            <div className="h-4 w-4 rounded-full bg-green-500" />
+            <CardTitle className="text-sm font-medium">In Tour</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{bookingStats.confirmed}</div>
-            <p className="text-xs text-muted-foreground">Ready to go</p>
+            <div className="text-2xl font-bold">{bookingStats.inTour}</div>
+            <p className="text-xs text-muted-foreground">Currently active</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
+            <CardTitle className="text-sm font-medium">Complete</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{bookingStats.pending}</div>
-            <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
+            <div className="text-2xl font-bold">{bookingStats.complete}</div>
+            <p className="text-xs text-muted-foreground">Finished trips</p>
           </CardContent>
         </Card>
 
@@ -178,9 +199,10 @@ export function BookingsView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="in-tour">In Tour</SelectItem>
+                <SelectItem value="pending-payment">Pending Payment</SelectItem>
+                <SelectItem value="complete">Complete</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -191,26 +213,91 @@ export function BookingsView() {
                 <TableRow>
                   <TableHead>Customer</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Destination</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Itinerary</TableHead>
+                  <TableHead>Trip Dates</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Advance</TableHead>
+                  <TableHead>Balance</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedBookings.map((booking) => (
-                  <TableRow key={booking.id}>
+                  <TableRow 
+                    key={booking.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedBooking(booking)}
+                  >
                     <TableCell className="font-medium">{booking.customerName}</TableCell>
                     <TableCell>{booking.customerPhone}</TableCell>
-                    <TableCell>{booking.destination}</TableCell>
-                    <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
-                    <TableCell>₹{booking.amount.toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                        {booking.status}
-                      </Badge>
+                      {booking.customerAddress ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{booking.customerAddress}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>{Array.isArray(booking.busNumber) ? booking.busNumber.join(', ') : (booking.busNumber || booking.busId)}</TableCell>
+                    <TableCell>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">{booking.destination}</p>
+                            {(booking.totalKilometers ?? 0) > 0 && (
+                              <p className="text-xs mt-1">Total: {booking.totalKilometers} km</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
+                    <TableCell>{new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>₹{booking.amount.toLocaleString()}</TableCell>
+                    <TableCell>₹{booking.advance.toLocaleString()}</TableCell>
+                    <TableCell>₹{booking.balance.toLocaleString()}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {editingStatus === booking.id ? (
+                        <Select value={booking.status} onValueChange={(value) => handleStatusUpdate(booking.id, value)}>
+                          <SelectTrigger className="w-32 h-6">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="in-tour">In Tour</SelectItem>
+                            <SelectItem value="pending-payment">Pending Payment</SelectItem>
+                            <SelectItem value="complete">Complete</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge 
+                          className={
+                            booking.status === 'complete' ? 'bg-green-100 text-green-800 border-green-200 cursor-pointer' :
+                            booking.status === 'in-tour' ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-pointer' :
+                            booking.status === 'pending-payment' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 cursor-pointer' :
+                            'bg-gray-100 text-gray-800 border-gray-200 cursor-pointer'
+                          }
+                          onClick={() => setEditingStatus(booking.id)}
+                        >
+                          {booking.status === 'in-tour' ? 'In Tour' : 
+                           booking.status === 'pending-payment' ? 'Pending Payment' :
+                           booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                        </Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -254,6 +341,15 @@ export function BookingsView() {
           )}
         </CardContent>
       </Card>
+
+      <BookingModal
+        booking={selectedBooking}
+        open={!!selectedBooking}
+        onOpenChange={(open) => !open && setSelectedBooking(null)}
+        onBookingUpdated={() => {
+          loadBookings();
+        }}
+      />
     </div>
   );
 }

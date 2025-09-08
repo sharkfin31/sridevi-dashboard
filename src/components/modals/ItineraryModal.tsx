@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,15 +8,30 @@ import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 interface ItineraryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (itinerary: string) => void;
+  onConfirm: (itinerary: string, totalKm?: number) => void;
   initialItinerary?: string;
+  initialKilometers?: number;
 }
 
-export function ItineraryModal({ onOpenChange, onConfirm, initialItinerary = '' }: ItineraryModalProps) {
-  const [locations, setLocations] = useState<string[]>(
-    initialItinerary ? initialItinerary.split(' - ') : []
-  );
+export function ItineraryModal({ onOpenChange, onConfirm, initialItinerary = '', initialKilometers = 0 }: ItineraryModalProps) {
+  const [locations, setLocations] = useState<string[]>([]);
   const [newLocation, setNewLocation] = useState('');
+  const [totalKilometers, setTotalKilometers] = useState(initialKilometers.toString());
+
+  // Parse and update locations when initialItinerary changes
+  React.useEffect(() => {
+    if (initialItinerary) {
+      // Split by common separators: ' - ', '-', ' to ', ' -> '
+      const parsed = initialItinerary
+        .split(/\s*-\s*|\s+to\s+|\s*->\s*/i)
+        .map(loc => loc.trim())
+        .filter(Boolean);
+      setLocations(parsed);
+    } else {
+      setLocations([]);
+    }
+    setTotalKilometers(initialKilometers.toString());
+  }, [initialItinerary, initialKilometers]);
 
   const addLocation = () => {
     if (newLocation.trim()) {
@@ -37,13 +52,22 @@ export function ItineraryModal({ onOpenChange, onConfirm, initialItinerary = '' 
   };
 
   const handleConfirm = () => {
-    onConfirm(locations.join(' - '));
+    onConfirm(locations.join(' - '), parseFloat(totalKilometers) || 0);
     onOpenChange(false);
   };
 
   const handleCancel = () => {
-    setLocations(initialItinerary ? initialItinerary.split(' - ') : []);
+    if (initialItinerary) {
+      const parsed = initialItinerary
+        .split(/\s*-\s*|\s+to\s+|\s*->\s*/i)
+        .map(loc => loc.trim())
+        .filter(Boolean);
+      setLocations(parsed);
+    } else {
+      setLocations([]);
+    }
     setNewLocation('');
+    setTotalKilometers(initialKilometers.toString());
     onOpenChange(false);
   };
 
@@ -118,6 +142,18 @@ export function ItineraryModal({ onOpenChange, onConfirm, initialItinerary = '' 
               </CardContent>
             </Card>
           </div>
+          
+          <div>
+            <Label htmlFor="totalKilometers">Total Kilometers</Label>
+            <Input
+              id="totalKilometers"
+              type="number"
+              value={totalKilometers}
+              onChange={(e) => setTotalKilometers(e.target.value)}
+              placeholder="Enter total distance in km"
+            />
+          </div>
+          
           <div className="flex gap-2 pt-4">
             <Button variant="outline" onClick={handleCancel} className="flex-1">
               Cancel

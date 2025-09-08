@@ -1,40 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Maintenance } from '@/types';
-import { createMaintenance } from '@/lib/notion';
+import { createMaintenance, updateMaintenance, getVehicles } from '@/lib/notion';
+import { MAINTENANCE_TYPES } from '@/lib/constants';
 
 interface MaintenanceFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMaintenanceCreated: () => void;
+  editingMaintenance?: Maintenance | null;
 }
 
-const buses = [
-  { id: 'BUS001', number: 'KA-01-AB-1234' },
-  { id: 'BUS002', number: 'KA-01-CD-5678' },
-  { id: 'BUS003', number: 'KA-01-EF-9012' },
-];
-
-const maintenanceTypes = [
-  'Regular Service',
-  'Oil Change',
-  'Tire Replacement',
-  'Brake Service',
-  'Engine Repair',
-  'AC Service',
-  'Body Work',
-];
-
-export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: MaintenanceFormProps) {
+export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated, editingMaintenance }: MaintenanceFormProps) {
   const [formData, setFormData] = useState({
     busId: '',
     type: '',
@@ -42,23 +23,62 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: Ma
     startDate: '',
     endDate: '',
   });
+
+  useEffect(() => {
+    if (editingMaintenance) {
+      setFormData({
+        busId: editingMaintenance.busId,
+        type: editingMaintenance.type,
+        description: editingMaintenance.description,
+        startDate: editingMaintenance.startDate.toISOString().split('T')[0],
+        endDate: editingMaintenance.endDate.toISOString().split('T')[0],
+      });
+    } else {
+      setFormData({
+        busId: '',
+        type: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+      });
+    }
+  }, [editingMaintenance, open]);
   const [loading, setLoading] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadVehicles = async () => {
+      const vehicleData = await getVehicles();
+      setVehicles(vehicleData);
+    };
+    if (open) loadVehicles();
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const maintenance: Omit<Maintenance, 'id'> = {
-        busId: formData.busId,
-        type: formData.type,
-        description: formData.description,
-        scheduledDate: new Date(formData.startDate),
-        estimatedDuration: Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60)),
-        status: 'scheduled',
-      };
-
-      await createMaintenance(maintenance);
+      if (editingMaintenance) {
+        await updateMaintenance(editingMaintenance.id, {
+          busId: formData.busId,
+          type: formData.type,
+          description: formData.description,
+          startDate: new Date(formData.startDate),
+          endDate: new Date(formData.endDate),
+        });
+      } else {
+        const maintenance: Omit<Maintenance, 'id'> = {
+          busId: formData.busId,
+          type: formData.type,
+          description: formData.description,
+          startDate: new Date(formData.startDate),
+          endDate: new Date(formData.endDate),
+          cost: 0,
+          status: 'scheduled',
+        };
+        await createMaintenance(maintenance);
+      }
       onMaintenanceCreated();
       onOpenChange(false);
       setFormData({
@@ -79,7 +99,7 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: Ma
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Schedule Maintenance</DialogTitle>
+          <DialogTitle>{editingMaintenance ? 'Edit Maintenance' : 'Schedule Maintenance'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -89,9 +109,9 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: Ma
                 <SelectValue placeholder="Select vehicle" />
               </SelectTrigger>
               <SelectContent>
-                {buses.map((bus) => (
-                  <SelectItem key={bus.id} value={bus.id}>
-                    {bus.number}
+                {vehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.busNumber} (Capacity: {vehicle.capacity})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -105,7 +125,7 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: Ma
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {maintenanceTypes.map((type) => (
+                {MAINTENANCE_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
                   </SelectItem>
@@ -116,12 +136,12 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: Ma
 
           <div>
             <Label htmlFor="description">Description</Label>
-            <Input
+            <textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="flex min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               placeholder="Add Notes"
-              className="focus-visible:ring-1 focus-visible:ring-primary/20"
               required
             />
           </div>
@@ -129,60 +149,22 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated }: Ma
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startDate">Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formData.startDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.startDate ? format(new Date(formData.startDate), "PPP") : "Pick date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.startDate ? new Date(formData.startDate + 'T00:00:00') : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-                        setFormData({ ...formData, startDate: localDate.toISOString().split('T')[0] });
-                      } else {
-                        setFormData({ ...formData, startDate: "" });
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                value={formData.startDate}
+                onChange={(date) => setFormData({ ...formData, startDate: date })}
+              />
             </div>
             <div>
               <Label htmlFor="endDate">End Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formData.endDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.endDate ? format(new Date(formData.endDate), "PPP") : "Pick date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.endDate ? new Date(formData.endDate + 'T00:00:00') : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-                        setFormData({ ...formData, endDate: localDate.toISOString().split('T')[0] });
-                      } else {
-                        setFormData({ ...formData, endDate: "" });
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                value={formData.endDate}
+                onChange={(date) => setFormData({ ...formData, endDate: date })}
+              />
             </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Scheduling...' : 'Schedule Maintenance'}
+            {loading ? (editingMaintenance ? 'Updating...' : 'Scheduling...') : (editingMaintenance ? 'Update Maintenance' : 'Schedule Maintenance')}
           </Button>
         </form>
       </DialogContent>

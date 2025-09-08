@@ -7,6 +7,7 @@ import {
   Home,
   Settings,
   Wrench,
+  TrendingUp,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -47,6 +48,12 @@ const data = {
       title: "Maintenance",
       url: "#",
       icon: Wrench,
+      isActive: false,
+    },
+    {
+      title: "Analytics",
+      url: "#",
+      icon: TrendingUp,
       isActive: false,
     },
     {
