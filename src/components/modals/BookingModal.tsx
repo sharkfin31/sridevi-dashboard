@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Booking } from '@/types';
 import { updateBooking, getVehicles } from '@/lib/notion';
+import { showToast } from '@/lib/toast';
 import { ItineraryModal } from './ItineraryModal';
 
 interface BookingModalProps {
@@ -39,7 +40,7 @@ export function BookingModal({ booking, open, onOpenChange, onBookingUpdated }: 
     advance: '',
     notes: '',
     totalKilometers: '',
-    status: 'confirmed' as 'confirmed' | 'in-tour' | 'pending-payment' | 'complete',
+    status: 'Confirmed' as 'Confirmed' | 'In Tour' | 'Pending Payment' | 'Complete',
   });
 
   const balance = formData.amount && formData.advance ? 
@@ -97,8 +98,9 @@ export function BookingModal({ booking, open, onOpenChange, onBookingUpdated }: 
         totalKilometers: parseFloat(formData.totalKilometers) || 0,
         status: formData.status,
       });
-      onBookingUpdated();
-      setIsEditing(false);
+      showToast('Record updated successfully', 'success');
+      onOpenChange(false);
+      await onBookingUpdated();
     } catch (error) {
       console.error('Error updating booking:', error);
     } finally {
@@ -342,14 +344,14 @@ export function BookingModal({ booking, open, onOpenChange, onBookingUpdated }: 
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="in-tour">In Tour</SelectItem>
-                      <SelectItem value="pending-payment">Pending Payment</SelectItem>
-                      <SelectItem value="complete">Complete</SelectItem>
+                      <SelectItem value="Confirmed">Confirmed</SelectItem>
+                      <SelectItem value="In Tour">In Tour</SelectItem>
+                      <SelectItem value="Pending Payment">Pending Payment</SelectItem>
+                      <SelectItem value="Complete">Complete</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input value={booking.status === 'in-tour' ? 'In Tour' : booking.status === 'pending-payment' ? 'Pending Payment' : booking.status.charAt(0).toUpperCase() + booking.status.slice(1)} readOnly className="bg-muted" />
+                  <Input value={booking.status || 'Unknown'} readOnly className="bg-muted" />
                 )}
               </div>
 

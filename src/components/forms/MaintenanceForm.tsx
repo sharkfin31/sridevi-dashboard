@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { DatePicker } from '@/components/ui/date-picker';
 import { Maintenance } from '@/types';
 import { createMaintenance, updateMaintenance, getVehicles } from '@/lib/notion';
+import { validateMaintenance, formatValidationErrors } from '@/lib/validation';
 import { MAINTENANCE_TYPES } from '@/lib/constants';
 
 interface MaintenanceFormProps {
@@ -59,26 +60,28 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated, edit
     setLoading(true);
 
     try {
-      if (editingMaintenance) {
-        await updateMaintenance(editingMaintenance.id, {
-          busId: formData.busId,
-          type: formData.type,
-          description: formData.description,
-          startDate: new Date(formData.startDate),
-          endDate: new Date(formData.endDate),
-        });
-      } else {
-        const maintenance: Omit<Maintenance, 'id'> = {
-          busId: formData.busId,
-          type: formData.type,
-          description: formData.description,
-          startDate: new Date(formData.startDate),
-          endDate: new Date(formData.endDate),
-          cost: 0,
-          status: 'scheduled',
-        };
-        await createMaintenance(maintenance);
+      const maintenanceData: Omit<Maintenance, 'id'> = {
+        busId: formData.busId,
+        type: formData.type,
+        description: formData.description,
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
+        cost: 0,
+        status: 'Pending',
+      };
+
+      const validationErrors = validateMaintenance(maintenanceData);
+      if (validationErrors.length > 0) {
+        alert('Validation errors:\n' + formatValidationErrors(validationErrors));
+        return;
       }
+
+      if (editingMaintenance) {
+        await updateMaintenance(editingMaintenance.id, maintenanceData);
+      } else {
+        await createMaintenance(maintenanceData);
+      }
+      
       onMaintenanceCreated();
       onOpenChange(false);
       setFormData({
@@ -90,6 +93,7 @@ export function MaintenanceForm({ open, onOpenChange, onMaintenanceCreated, edit
       });
     } catch (error) {
       console.error('Error creating maintenance:', error);
+      alert('Error creating maintenance: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }

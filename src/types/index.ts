@@ -29,7 +29,7 @@ export interface Booking {
   totalKilometers?: number;
   startOdoReading?: number;
   endOdoReading?: number;
-  status: 'confirmed' | 'in-tour' | 'pending-payment' | 'complete';
+  status: 'Confirmed' | 'In Tour' | 'Pending Payment' | 'Complete';
 }
 
 export interface Maintenance {
@@ -41,7 +41,7 @@ export interface Maintenance {
   startDate: Date;
   endDate: Date;
   cost: number;
-  status: 'scheduled' | 'in-progress' | 'done';
+  status: 'Pending' | 'In Progress' | 'Done';
   mileage?: number | null;
   galleries?: string[];
   invoice?: string;

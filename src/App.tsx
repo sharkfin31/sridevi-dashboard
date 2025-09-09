@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { AppSidebar, SiteHeader } from './components/layout';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { GoogleCalendar, BookingsView, MaintenanceView, AnalyticsView } from './components/views';
+import { SettingsView } from './components/views/SettingsView';
+import { AccountView } from './components/views/AccountView';
+import { LoginForm } from './components/auth/LoginForm';
+import { authManager } from './lib/auth';
 import { BookingForm, MaintenanceForm } from './components/forms';
 import { CalendarEvent, Booking, Maintenance } from './types';
 import { getBookings, getMaintenance } from './lib/notion';
@@ -12,6 +16,8 @@ import { useFeatures } from './hooks/useFeatures';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showAccount, setShowAccount] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(authManager.isAuthenticated());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
@@ -19,18 +25,28 @@ function App() {
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const { features } = useFeatures();
+  
+  // Override admin mode if user is manager
+  const isAdminMode = features.ADMIN_MODE && authManager.getUser()?.role !== 'manager';
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    authManager.logout();
+    setIsAuthenticated(false);
+    setActiveTab('dashboard');
+    setShowAccount(false);
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log('🔄 Loading data...');
       const [bookingsData, maintenanceData] = await Promise.all([
         getBookings(),
         getMaintenance(),
       ]);
-
-      console.log('📊 Loaded bookings:', bookingsData.length, bookingsData);
-      console.log('🔧 Loaded maintenance:', maintenanceData.length, maintenanceData);
 
       setBookings(bookingsData);
       setMaintenance(maintenanceData);
@@ -54,7 +70,7 @@ function App() {
         data: maint,
       }));
 
-      console.log('📅 Created events:', [...bookingEvents, ...maintenanceEvents]);
+
       setEvents([...bookingEvents, ...maintenanceEvents]);
     } catch (error) {
       console.error('❌ Error loading data:', error);
@@ -64,12 +80,18 @@ function App() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated]);
 
   const handleDataUpdate = () => {
     loadData();
   };
+
+  if (!isAuthenticated) {
+    return <LoginForm onLoginSuccess={handleLoginSuccess} />;
+  }
 
   const renderContent = () => {
     if (loading) {
@@ -94,7 +116,11 @@ function App() {
       case 'maintenance':
         return <MaintenanceView maintenance={maintenance} onMaintenanceUpdated={handleDataUpdate} />;
       case 'analytics':
-        return <AnalyticsView events={events} bookings={bookings} maintenance={maintenance} />;
+        return isAdminMode ? <AnalyticsView events={events} bookings={bookings} maintenance={maintenance} /> : <div className="text-center py-8">Access denied</div>;
+      case 'settings':
+        return isAdminMode ? <SettingsView /> : <div className="text-center py-8">Access denied</div>;
+      case 'account':
+        return <AccountView />;
       case 'test':
         return (
           <div className="space-y-4">
@@ -112,46 +138,54 @@ function App() {
 
   return (
     <SidebarProvider>
-      <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <AppSidebar 
+        activeTab={activeTab} 
+        onTabChange={(tab) => {
+          if (tab === 'account') {
+            setShowAccount(true);
+          } else {
+            setActiveTab(tab);
+            setShowAccount(false);
+          }
+        }} 
+        isAdminMode={isAdminMode}
+        onAccountClick={() => {
+          setActiveTab('account');
+          setShowAccount(true);
+        }}
+        onLogout={handleLogout}
+      />
       <SidebarInset>
         <SiteHeader activeTab={activeTab}>
           <div className="flex items-center gap-2 ml-auto">
-            {features.ADMIN_MODE && (
-              <>
-                <Button onClick={() => setShowBookingForm(true)} size="sm">
-                  <Plus className="h-4 w-4" />
-                  New Booking
-                </Button>
-                <Button onClick={() => setShowMaintenanceForm(true)} variant="outline" size="sm">
-                  <Wrench className="h-4 w-4" />
-                  Schedule Maintenance
-                </Button>
-              </>
-            )}
+            <Button onClick={() => setShowBookingForm(true)} size="sm">
+              <Plus className="h-4 w-4" />
+              New Booking
+            </Button>
+            <Button onClick={() => setShowMaintenanceForm(true)} variant="outline" size="sm">
+              <Wrench className="h-4 w-4" />
+              Schedule Maintenance
+            </Button>
           </div>
         </SiteHeader>
         
         <div className="flex flex-1 flex-col">
           <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            {renderContent()}
+            {showAccount ? <AccountView /> : renderContent()}
           </div>
         </div>
       </SidebarInset>
 
-      {features.ADMIN_MODE && (
-        <>
-          <BookingForm
-            open={showBookingForm}
-            onOpenChange={setShowBookingForm}
-            onBookingCreated={handleDataUpdate}
-          />
-          <MaintenanceForm
-            open={showMaintenanceForm}
-            onOpenChange={setShowMaintenanceForm}
-            onMaintenanceCreated={handleDataUpdate}
-          />
-        </>
-      )}
+      <BookingForm
+        open={showBookingForm}
+        onOpenChange={setShowBookingForm}
+        onBookingCreated={handleDataUpdate}
+      />
+      <MaintenanceForm
+        open={showMaintenanceForm}
+        onOpenChange={setShowMaintenanceForm}
+        onMaintenanceCreated={handleDataUpdate}
+      />
 
 
     </SidebarProvider>

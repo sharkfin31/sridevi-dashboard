@@ -70,9 +70,9 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
 
   const maintenanceStats = {
     total: maintenance.length,
-    scheduled: maintenance.filter((m) => m.status === 'scheduled').length,
-    inProgress: maintenance.filter((m) => m.status === 'in-progress').length,
-    completed: maintenance.filter((m) => m.status === 'done').length,
+    scheduled: maintenance.filter((m) => m.status === 'Pending').length,
+    inProgress: maintenance.filter((m) => m.status === 'In Progress').length,
+    completed: maintenance.filter((m) => m.status === 'Done').length,
   };
 
   return (
@@ -218,13 +218,13 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
                       ) : (
                         <Badge 
                           className={
-                            item.status === 'done' ? 'bg-green-100 text-green-800 border-green-200 cursor-pointer' :
-                            item.status === 'in-progress' ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-pointer' :
+                            item.status === 'Done' ? 'bg-green-100 text-green-800 border-green-200 cursor-pointer' :
+                            item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-pointer' :
                             'bg-gray-100 text-gray-800 border-gray-200 cursor-pointer'
                           }
                           onClick={() => setEditingStatus(item.id)}
                         >
-                          {item.status === 'in-progress' ? 'In Progress' :
+                          {item.status === 'In Progress' ? 'In Progress' :
                            item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                         </Badge>
                       )}

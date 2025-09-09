@@ -1,11 +1,13 @@
 import { useMemo, useEffect, useState } from 'react';
 import { DashboardStats } from './DashboardStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CalendarEvent, Booking, Maintenance } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, AlertTriangle } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { getVehicles, getBookings, getMaintenance } from '@/lib/notion';
 
@@ -33,7 +35,7 @@ function FleetAvailabilityCard() {
         return bookings.some(b => {
           const busIds = Array.isArray(b.busId) ? b.busId : [b.busId];
           if (!busIds.includes(busId)) return false;
-          if (!range?.from || !range?.to) return b.status === 'confirmed' || b.status === 'in-tour';
+          if (!range?.from || !range?.to) return b.status === 'Confirmed' || b.status === 'In Tour';
           // Check date overlap
           return (
             b.startDate <= (range.to as Date) && b.endDate >= (range.from as Date)
@@ -45,7 +47,7 @@ function FleetAvailabilityCard() {
       function isMaintenance(busId: string) {
         return maintenance.some(m => {
           if (m.busId !== busId) return false;
-          if (!range?.from || !range?.to) return m.status !== 'done';
+          if (!range?.from || !range?.to) return m.status !== 'Done';
           // Check date overlap
           return (
             m.startDate <= (range.to as Date) && m.endDate >= (range.from as Date)
@@ -166,11 +168,26 @@ function FleetAvailabilityCard() {
   );
 }
 
-export function DashboardView({ events, bookings = [] }: DashboardViewProps) {
+export function DashboardView({ bookings = [] }: DashboardViewProps) {
+  const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const maintenanceData = await getMaintenance();
+        setMaintenance(maintenanceData);
+      } catch (error) {
+        console.error('Dashboard data fetch failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
   const stats = useMemo(() => {
-    const bookingEvents = events.filter(e => e.type === 'booking');
-    const maintenanceEvents = events.filter(e => e.type === 'maintenance');
-    
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -184,18 +201,144 @@ export function DashboardView({ events, bookings = [] }: DashboardViewProps) {
 
     return {
       totalBookings: bookings.length,
-      activeBookings: bookings.filter(b => b.status === 'in-tour').length,
-      maintenanceScheduled: maintenanceEvents.filter(e => {
-        const maint = e.data as Maintenance;
-        return maint.status === 'scheduled';
-      }).length,
+      activeBookings: bookings.filter(b => b.status === 'In Tour').length,
+      maintenanceScheduled: maintenance.filter(m => m.status === 'Pending').length,
       totalRevenue: monthlyRevenue
     };
-  }, [events, bookings]);
+  }, [bookings, maintenance]);
+
+
+
+  const upcomingMaintenance = maintenance
+    .filter(m => m.status === 'Pending')
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+    .slice(0, 5);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Loading dashboard...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <DashboardStats {...stats} />
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Today's Operations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Destination</TableHead>
+                  <TableHead>Bus</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bookings
+                  .filter(b => {
+                    const today = new Date();
+                    const bookingDate = new Date(b.startDate);
+                    return bookingDate.toDateString() === today.toDateString();
+                  })
+                  .slice(0, 5)
+                  .map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">{booking.customerName}</TableCell>
+                      <TableCell>{booking.destination}</TableCell>
+                      <TableCell>{booking.busId}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          booking.status === 'Confirmed' ? 'default' :
+                          booking.status === 'In Tour' ? 'secondary' : 'outline'
+                        }>
+                          {booking.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                {bookings.filter(b => {
+                  const today = new Date();
+                  const bookingDate = new Date(b.startDate);
+                  return bookingDate.toDateString() === today.toDateString();
+                }).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      No bookings scheduled for today
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Urgent Maintenance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Bus</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Priority</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {upcomingMaintenance
+                  .filter(m => {
+                    const dueDate = new Date(m.startDate);
+                    const today = new Date();
+                    const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                    return daysDiff <= 7; // Show maintenance due within 7 days
+                  })
+                  .slice(0, 5)
+                  .map((maint) => {
+                    const dueDate = new Date(maint.startDate);
+                    const today = new Date();
+                    const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                    return (
+                      <TableRow key={maint.id}>
+                        <TableCell className="font-medium">{maint.busId}</TableCell>
+                        <TableCell>{maint.type}</TableCell>
+                        <TableCell>{dueDate.toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            daysDiff <= 1 ? 'destructive' :
+                            daysDiff <= 3 ? 'secondary' : 'outline'
+                          }>
+                            {daysDiff <= 0 ? 'Overdue' : daysDiff <= 1 ? 'Urgent' : daysDiff <= 3 ? 'Soon' : 'Scheduled'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                {upcomingMaintenance.filter(m => {
+                  const dueDate = new Date(m.startDate);
+                  const today = new Date();
+                  const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                  return daysDiff <= 7;
+                }).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      No urgent maintenance scheduled
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
       
       <div className="w-full">
         <FleetAvailabilityCard />

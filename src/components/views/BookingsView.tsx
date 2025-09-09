@@ -14,7 +14,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Booking } from '@/types';
 import { getBookings } from '@/lib/notion';
 import { BookingModal } from '@/components/modals/BookingModal';
-import { updateBooking } from '@/lib/notion';
 
 export function BookingsView() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -24,15 +23,13 @@ export function BookingsView() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
-  const [editingStatus, setEditingStatus] = useState<string | null>(null);
+
   const itemsPerPage = 10;
 
   const loadBookings = async () => {
     try {
       setLoading(true);
-      console.log('📊 BookingsView: Loading bookings...');
       const data = await getBookings();
-      console.log('📊 BookingsView: Loaded bookings:', data.length, data);
       setBookings(data);
     } catch (error) {
       console.error('❌ BookingsView: Error loading bookings:', error);
@@ -45,15 +42,7 @@ export function BookingsView() {
     loadBookings();
   }, []);
 
-  const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
-    try {
-      await updateBooking(bookingId, { status: newStatus as any });
-      await loadBookings();
-      setEditingStatus(null);
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  };
+
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
@@ -87,10 +76,10 @@ export function BookingsView() {
 
   const bookingStats = {
     total: bookings.length,
-    booked: bookings.filter((b) => b.status === 'confirmed').length,
-    inTour: bookings.filter((b) => b.status === 'in-tour').length,
-    pendingPayment: bookings.filter((b) => b.status === 'pending-payment').length,
-    complete: bookings.filter((b) => b.status === 'complete').length,
+    booked: bookings.filter((b) => b.status === 'Confirmed').length,
+    inTour: bookings.filter((b) => b.status === 'In Tour').length,
+    pendingPayment: bookings.filter((b) => b.status === 'Pending Payment').length,
+    complete: bookings.filter((b) => b.status === 'Complete').length,
     totalRevenue: bookings.reduce((sum, b) => sum + b.amount, 0),
   };
 
@@ -199,10 +188,10 @@ export function BookingsView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="in-tour">In Tour</SelectItem>
-                <SelectItem value="pending-payment">Pending Payment</SelectItem>
-                <SelectItem value="complete">Complete</SelectItem>
+                <SelectItem value="Confirmed">Confirmed</SelectItem>
+                <SelectItem value="In Tour">In Tour</SelectItem>
+                <SelectItem value="Pending Payment">Pending Payment</SelectItem>
+                <SelectItem value="Complete">Complete</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -270,34 +259,17 @@ export function BookingsView() {
                     <TableCell>₹{booking.amount.toLocaleString()}</TableCell>
                     <TableCell>₹{booking.advance.toLocaleString()}</TableCell>
                     <TableCell>₹{booking.balance.toLocaleString()}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {editingStatus === booking.id ? (
-                        <Select value={booking.status} onValueChange={(value) => handleStatusUpdate(booking.id, value)}>
-                          <SelectTrigger className="w-32 h-6">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="in-tour">In Tour</SelectItem>
-                            <SelectItem value="pending-payment">Pending Payment</SelectItem>
-                            <SelectItem value="complete">Complete</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge 
-                          className={
-                            booking.status === 'complete' ? 'bg-green-100 text-green-800 border-green-200 cursor-pointer' :
-                            booking.status === 'in-tour' ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-pointer' :
-                            booking.status === 'pending-payment' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 cursor-pointer' :
-                            'bg-gray-100 text-gray-800 border-gray-200 cursor-pointer'
-                          }
-                          onClick={() => setEditingStatus(booking.id)}
-                        >
-                          {booking.status === 'in-tour' ? 'In Tour' : 
-                           booking.status === 'pending-payment' ? 'Pending Payment' :
-                           booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                        </Badge>
-                      )}
+                    <TableCell>
+                      <Badge 
+                        className={
+                          booking.status === 'Complete' ? 'bg-green-100 text-green-800 border-green-200' :
+                          booking.status === 'In Tour' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                          booking.status === 'Pending Payment' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                          'bg-gray-100 text-gray-800 border-gray-200'
+                        }
+                      >
+                        {booking.status}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -346,8 +318,8 @@ export function BookingsView() {
         booking={selectedBooking}
         open={!!selectedBooking}
         onOpenChange={(open) => !open && setSelectedBooking(null)}
-        onBookingUpdated={() => {
-          loadBookings();
+        onBookingUpdated={async () => {
+          await loadBookings();
         }}
       />
     </div>

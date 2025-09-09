@@ -1,6 +1,5 @@
 import {
   LogOutIcon,
-  SettingsIcon,
   UserCircleIcon,
 } from "lucide-react"
 
@@ -27,12 +26,16 @@ import {
 
 export function NavUser({
   user,
+  onAccountClick,
+  onLogout,
 }: {
   user: {
     name: string
     email: string
     avatar: string
   }
+  onAccountClick?: () => void
+  onLogout?: () => void
 }) {
   const { isMobile } = useSidebar()
 
@@ -57,7 +60,7 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            side={isMobile ? "top" : "top"}
             align="end"
             sideOffset={4}
           >
@@ -75,17 +78,13 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={onAccountClick}>
                 <UserCircleIcon />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <SettingsIcon />
-                Settings
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={onLogout}>
               <LogOutIcon />
               Log out
             </DropdownMenuItem>

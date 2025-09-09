@@ -1,29 +1,12 @@
-import { useEffect, useState } from 'react';
-import { flagsmith, getFeatures } from '../../lib/features';
+
+import { useFeatures } from '@/hooks/useFeatures';
 
 interface CalendarProps {
   height?: string;
 }
 
 export function GoogleCalendar({ height = "700px" }: CalendarProps) {
-  const [features, setFeatures] = useState(getFeatures());
-
-  useEffect(() => {
-    const loadFeatures = async () => {
-      try {
-        await flagsmith.init({
-          environmentID: import.meta.env.VITE_FLAGSMITH_ENVIRONMENT_ID || '',
-        });
-        
-        const updatedFeatures = getFeatures();
-        setFeatures(updatedFeatures);
-      } catch (error) {
-        console.error('Flagsmith init error:', error);
-      }
-    };
-    
-    loadFeatures();
-  }, []);
+  const { features } = useFeatures();
 
   return (
     <div className="flex gap-4 h-full">

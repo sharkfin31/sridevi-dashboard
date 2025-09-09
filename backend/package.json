@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
+    "create-users": "node scripts/create-users.js",
+    "generate-jwt-secret": "node scripts/generate-jwt-secret.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,11 +16,14 @@
   "type": "commonjs",
   "dependencies": {
     "@notionhq/client": "^4.0.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "flagsmith-nodejs": "^6.1.0",
-    "googleapis": "^157.0.0",
+
+
+    "jsonwebtoken": "^9.0.2",
+    "memory-cache": "^0.2.0",
     "node-cron": "^4.2.1"
   }
 }

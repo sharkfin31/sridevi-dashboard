@@ -6,11 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Booking } from '@/types';
 import { createBooking, updateBooking } from '@/lib/notion';
+import { validateBooking, formatValidationErrors } from '@/lib/validation';
+import { showToast } from '@/lib/toast';
 import { ItineraryModal } from '../modals/ItineraryModal';
 
 interface BookingFormProps {
@@ -35,6 +38,7 @@ export function BookingForm({ open, onOpenChange, onBookingCreated, editingBooki
     advance: '',
     notes: '',
     totalKilometers: '',
+    status: 'Confirmed',
   });
   const [loading, setLoading] = useState(false);
   const [showItinerary, setShowItinerary] = useState(false);
@@ -66,6 +70,7 @@ export function BookingForm({ open, onOpenChange, onBookingCreated, editingBooki
         advance: editingBooking.advance.toString(),
         notes: editingBooking.notes || '',
         totalKilometers: editingBooking.totalKilometers?.toString() || '',
+        status: editingBooking.status,
       });
       setItinerarySaved(true);
     } else {
@@ -81,6 +86,7 @@ export function BookingForm({ open, onOpenChange, onBookingCreated, editingBooki
         advance: '',
         notes: '',
         totalKilometers: '',
+        status: 'Confirmed',
       });
       setItinerarySaved(false);
     }
@@ -91,38 +97,36 @@ export function BookingForm({ open, onOpenChange, onBookingCreated, editingBooki
     setLoading(true);
 
     try {
-      if (editingBooking) {
-        await updateBooking(editingBooking.id, {
-          busId: formData.busId,
-          customerName: formData.customerName,
-          customerPhone: formData.customerPhone,
-          customerAddress: formData.customerAddress,
-          destination: formData.destination,
-          startDate: new Date(formData.startDate),
-          endDate: new Date(formData.endDate),
-          amount: parseFloat(formData.amount),
-          advance: parseFloat(formData.advance),
-          notes: formData.notes,
-          totalKilometers: parseFloat(formData.totalKilometers) || 0,
-        });
-      } else {
-        const booking: Omit<Booking, 'id'> = {
-          busId: formData.busId,
-          customerName: formData.customerName,
-          customerPhone: formData.customerPhone,
-          customerAddress: formData.customerAddress,
-          destination: formData.destination,
-          startDate: new Date(formData.startDate),
-          endDate: new Date(formData.endDate),
-          amount: parseFloat(formData.amount),
-          advance: parseFloat(formData.advance),
-          balance: balance,
-          notes: formData.notes,
-          totalKilometers: parseFloat(formData.totalKilometers) || 0,
-          status: 'confirmed',
-        };
-        await createBooking(booking);
+      const bookingData: Omit<Booking, 'id'> = {
+        busId: formData.busId,
+        customerName: formData.customerName,
+        customerPhone: formData.customerPhone,
+        customerAddress: formData.customerAddress,
+        destination: formData.destination,
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
+        amount: parseFloat(formData.amount),
+        advance: parseFloat(formData.advance),
+        balance: balance,
+        notes: formData.notes,
+        totalKilometers: parseFloat(formData.totalKilometers) || 0,
+        status: formData.status as 'Confirmed' | 'In Tour' | 'Pending Payment' | 'Complete',
+      };
+
+      const validationErrors = validateBooking(bookingData);
+      if (validationErrors.length > 0) {
+        alert('Validation errors:\n' + formatValidationErrors(validationErrors));
+        return;
       }
+
+      if (editingBooking) {
+        await updateBooking(editingBooking.id, bookingData);
+        showToast('Record updated successfully');
+      } else {
+        await createBooking(bookingData);
+        showToast('Booking created successfully');
+      }
+      
       onBookingCreated();
       onOpenChange(false);
       setFormData({
@@ -137,9 +141,11 @@ export function BookingForm({ open, onOpenChange, onBookingCreated, editingBooki
         advance: '',
         notes: '',
         totalKilometers: '',
+        status: 'Confirmed',
       });
     } catch (error) {
       console.error('Error creating booking:', error);
+      alert('Error creating booking: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -318,7 +324,23 @@ export function BookingForm({ open, onOpenChange, onBookingCreated, editingBooki
             </div>
           </div>
 
-          {/* Row 7: Additional Notes */}
+          {/* Row 7: Status */}
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Confirmed">Confirmed</SelectItem>
+                <SelectItem value="In Tour">In Tour</SelectItem>
+                <SelectItem value="Pending Payment">Pending Payment</SelectItem>
+                <SelectItem value="Complete">Complete</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Row 8: Additional Notes */}
           <div>
             <Label htmlFor="notes">Additional Notes</Label>
             <textarea

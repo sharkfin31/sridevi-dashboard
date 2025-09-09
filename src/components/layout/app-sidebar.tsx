@@ -19,6 +19,8 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 
+import { authManager } from "@/lib/auth"
+
 const data = {
   user: {
     name: "Admin",
@@ -55,12 +57,14 @@ const data = {
       url: "#",
       icon: TrendingUp,
       isActive: false,
+      adminOnly: true,
     },
     {
       title: "Settings",
       url: "#",
       icon: Settings,
       isActive: false,
+      adminOnly: true,
     },
   ],
 }
@@ -68,14 +72,19 @@ const data = {
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   activeTab: string
   onTabChange: (tab: string) => void
+  isAdminMode?: boolean
+  onAccountClick?: () => void
+  onLogout?: () => void
 }
 
-export function AppSidebar({ activeTab, onTabChange, ...props }: AppSidebarProps) {
-  const navItems = data.navMain.map(item => ({
-    ...item,
-    isActive: activeTab === item.title.toLowerCase(),
-    onClick: () => onTabChange(item.title.toLowerCase())
-  }))
+export function AppSidebar({ activeTab, onTabChange, isAdminMode = false, onAccountClick, onLogout, ...props }: AppSidebarProps) {
+  const navItems = data.navMain
+    .filter(item => !item.adminOnly || isAdminMode)
+    .map(item => ({
+      ...item,
+      isActive: activeTab === item.title.toLowerCase(),
+      onClick: () => onTabChange(item.title.toLowerCase())
+    }))
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -93,7 +102,15 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: AppSidebarProps
         <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser 
+          user={{
+            name: authManager.getUser()?.name || data.user.name,
+            email: authManager.getUser()?.email || data.user.email,
+            avatar: data.user.avatar
+          }} 
+          onAccountClick={onAccountClick} 
+          onLogout={onLogout} 
+        />
       </SidebarFooter>
     </Sidebar>
   )
