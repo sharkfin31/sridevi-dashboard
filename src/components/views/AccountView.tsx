@@ -86,7 +86,7 @@ export function AccountView() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`grid gap-6 ${features.PASS_CHANGE_ENABLED ? 'md:grid-cols-2' : 'md:grid-cols-1 md:max-w-md md:mx-auto'}`}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
