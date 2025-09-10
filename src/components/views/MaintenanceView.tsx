@@ -85,7 +85,6 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{maintenanceStats.total}</div>
-            <p className="text-xs text-muted-foreground">All maintenance records</p>
           </CardContent>
         </Card>
 
@@ -96,7 +95,6 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{maintenanceStats.scheduled}</div>
-            <p className="text-xs text-muted-foreground">Upcoming tasks</p>
           </CardContent>
         </Card>
 
@@ -107,7 +105,6 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{maintenanceStats.inProgress}</div>
-            <p className="text-xs text-muted-foreground">Currently working</p>
           </CardContent>
         </Card>
 
@@ -118,7 +115,6 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{maintenanceStats.completed}</div>
-            <p className="text-xs text-muted-foreground">Finished tasks</p>
           </CardContent>
         </Card>
       </div>

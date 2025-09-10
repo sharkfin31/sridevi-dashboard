@@ -2,10 +2,9 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { CheckIcon, XCircle, ChevronDown, X, WandSparkles } from "lucide-react"
+import { CheckIcon, XCircle, ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -20,7 +19,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command"
 
 const multiSelectVariants = cva(
@@ -84,7 +82,7 @@ export const MultiSelect = React.forwardRef<
     const [selectedValues, setSelectedValues] =
       React.useState<string[]>(defaultValue)
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false)
-    const [isAnimating, setIsAnimating] = React.useState(false)
+    const [isAnimating] = React.useState(false)
 
     React.useEffect(() => {
       if (JSON.stringify(selectedValues) !== JSON.stringify(defaultValue)) {
@@ -113,11 +111,6 @@ export const MultiSelect = React.forwardRef<
       onValueChange(newSelectedValues)
     }
 
-    const handleClear = () => {
-      setSelectedValues([])
-      onValueChange([])
-    }
-
     const handleTogglePopover = () => {
       setIsPopoverOpen((prev) => !prev)
     }
@@ -126,16 +119,6 @@ export const MultiSelect = React.forwardRef<
       const newSelectedValues = selectedValues.slice(0, maxCount)
       setSelectedValues(newSelectedValues)
       onValueChange(newSelectedValues)
-    }
-
-    const toggleAll = () => {
-      if (selectedValues.length === options.length) {
-        handleClear()
-      } else {
-        const allValues = options.map((option) => option.value)
-        setSelectedValues(allValues)
-        onValueChange(allValues)
-      }
     }
 
     return (

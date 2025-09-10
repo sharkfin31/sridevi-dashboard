@@ -74,13 +74,20 @@ export function BookingsView() {
     currentPage * itemsPerPage
   );
 
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const currentMonthBookings = bookings.filter(b => {
+    const date = new Date(b.startDate);
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  });
+
   const bookingStats = {
-    total: bookings.length,
-    booked: bookings.filter((b) => b.status === 'Confirmed').length,
-    inTour: bookings.filter((b) => b.status === 'In Tour').length,
-    pendingPayment: bookings.filter((b) => b.status === 'Pending Payment').length,
-    complete: bookings.filter((b) => b.status === 'Complete').length,
-    totalRevenue: bookings.reduce((sum, b) => sum + b.amount, 0),
+    total: currentMonthBookings.length,
+    booked: currentMonthBookings.filter((b) => b.status === 'Confirmed').length,
+    inTour: currentMonthBookings.filter((b) => b.status === 'In Tour').length,
+    pendingPayment: currentMonthBookings.filter((b) => b.status === 'Pending Payment').length,
+    complete: currentMonthBookings.filter((b) => b.status === 'Complete').length,
+    totalRevenue: currentMonthBookings.reduce((sum, b) => sum + b.amount, 0),
   };
 
   if (loading) {
@@ -96,12 +103,11 @@ export function BookingsView() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <CardTitle className="text-sm font-medium">This Month Bookings</CardTitle>
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{bookingStats.total}</div>
-            <p className="text-xs text-muted-foreground">All time bookings</p>
           </CardContent>
         </Card>
 
@@ -112,7 +118,6 @@ export function BookingsView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{bookingStats.inTour}</div>
-            <p className="text-xs text-muted-foreground">Currently active</p>
           </CardContent>
         </Card>
 
@@ -123,18 +128,16 @@ export function BookingsView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{bookingStats.complete}</div>
-            <p className="text-xs text-muted-foreground">Finished trips</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">This Month Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₹{bookingStats.totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Total revenue</p>
           </CardContent>
         </Card>
       </div>

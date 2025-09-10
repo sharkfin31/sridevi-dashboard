@@ -20,7 +20,7 @@ export function YearPicker({ selectedYear, onYearSelect, placeholder = "Select y
         <Button
           variant="outline"
           size="sm"
-          className="justify-between font-normal"
+          className="h-10 justify-between font-normal text-sm"
         >
           {selectedYear ? selectedYear.getFullYear() : placeholder}
           <ChevronDownIcon className="h-4 w-4" />

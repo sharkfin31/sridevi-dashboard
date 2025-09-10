@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
@@ -6,7 +8,6 @@ const { Client } = require('@notionhq/client');
 // const GoogleCalendarSync = require('./services/google-calendar'); // Moved to disabled/
 const { authenticateToken } = require('./middleware/auth');
 const authService = require('./services/auth');
-require('dotenv').config();
 
 // Simple feature flags from environment
 const FEATURES = {
@@ -143,8 +144,8 @@ app.post('/api/databases/:id/query', authenticateToken, async (req, res) => {
     cache.put(cacheKey, response, CACHE_DURATION);
     res.json(response);
   } catch (error) {
-    console.error('Database query error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error(`BACKEND: Notion DB query failed - ID: ${id}, Error: ${error.message}`);
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 

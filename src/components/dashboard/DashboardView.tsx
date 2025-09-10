@@ -17,7 +17,12 @@ interface DashboardViewProps {
 }
 
 function FleetAvailabilityCard() {
-  const [range, setRange] = useState<DateRange | undefined>();
+  const [range, setRange] = useState<DateRange | undefined>(() => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return { from: today, to: tomorrow };
+  });
   const [loading, setLoading] = useState(true);
   const [fleetData, setFleetData] = useState<any[]>([]);
 
@@ -191,19 +196,62 @@ export function DashboardView({ bookings = [] }: DashboardViewProps) {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
     
-    const monthlyRevenue = bookings
-      .filter(booking => {
-        const bookingDate = new Date(booking.startDate);
-        return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
-      })
-      .reduce((sum, booking) => sum + booking.amount, 0);
+    // Current month data
+    const currentMonthBookings = bookings.filter(booking => {
+      const bookingDate = new Date(booking.startDate);
+      return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+    });
+    
+    const monthlyRevenue = currentMonthBookings.reduce((sum, booking) => sum + booking.amount, 0);
+    const currentActiveBookings = bookings.filter(b => b.status === 'In Tour').length;
+    const currentMaintenanceScheduled = maintenance.filter(m => m.status === 'Pending').length;
+
+    // Last month data for comparison
+    const lastMonthBookings = bookings.filter(booking => {
+      const bookingDate = new Date(booking.startDate);
+      return bookingDate.getMonth() === lastMonth && bookingDate.getFullYear() === lastMonthYear;
+    });
+    
+    const lastMonthRevenue = lastMonthBookings.reduce((sum, booking) => sum + booking.amount, 0);
+    const lastMonthActiveBookings = lastMonthBookings.filter(b => b.status === 'In Tour').length;
+    const lastMonthMaintenance = maintenance.filter(m => {
+      const date = new Date(m.startDate);
+      return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear && m.status === 'Pending';
+    }).length;
+
+    // Calculate percentage changes
+    const bookingsChange = lastMonthBookings.length > 0 
+      ? ((currentMonthBookings.length - lastMonthBookings.length) / lastMonthBookings.length * 100).toFixed(1)
+      : currentMonthBookings.length > 0 ? '100' : '0';
+    
+    const activeChange = lastMonthActiveBookings > 0 
+      ? ((currentActiveBookings - lastMonthActiveBookings) / lastMonthActiveBookings * 100).toFixed(1)
+      : currentActiveBookings > 0 ? '100' : '0';
+    
+    const maintenanceChange = lastMonthMaintenance > 0 
+      ? ((currentMaintenanceScheduled - lastMonthMaintenance) / lastMonthMaintenance * 100).toFixed(1)
+      : currentMaintenanceScheduled > 0 ? '100' : '0';
+    
+    const revenueChange = lastMonthRevenue > 0 
+      ? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1)
+      : monthlyRevenue > 0 ? '100' : '0';
 
     return {
-      totalBookings: bookings.length,
-      activeBookings: bookings.filter(b => b.status === 'In Tour').length,
-      maintenanceScheduled: maintenance.filter(m => m.status === 'Pending').length,
-      totalRevenue: monthlyRevenue
+      totalBookings: currentMonthBookings.length,
+      activeBookings: currentActiveBookings,
+      maintenanceScheduled: currentMaintenanceScheduled,
+      totalRevenue: monthlyRevenue,
+      bookingsChange: `${bookingsChange}% from last month`,
+      activeChange: `${activeChange}% from last month`,
+      maintenanceChange: `${maintenanceChange}% from last month`,
+      revenueChange: `${revenueChange}% from last month`,
+      bookingsTrend: parseFloat(bookingsChange) >= 0 ? ('up' as const) : ('down' as const),
+      activeTrend: parseFloat(activeChange) >= 0 ? ('up' as const) : ('down' as const),
+      maintenanceTrend: parseFloat(maintenanceChange) >= 0 ? ('up' as const) : ('down' as const),
+      revenueTrend: parseFloat(revenueChange) >= 0 ? ('up' as const) : ('down' as const)
     };
   }, [bookings, maintenance]);
 

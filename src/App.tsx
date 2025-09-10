@@ -9,15 +9,29 @@ import { authManager } from './lib/auth';
 import { BookingForm, MaintenanceForm } from './components/forms';
 import { CalendarEvent, Booking, Maintenance } from './types';
 import { getBookings, getMaintenance } from './lib/notion';
-import { SidebarProvider, SidebarInset } from './components/ui/sidebar';
+import { SidebarProvider, SidebarInset, useSidebar } from './components/ui/sidebar';
 import { Button } from './components/ui/button';
-import { Plus, Wrench } from 'lucide-react';
+import { Plus, Wrench, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useFeatures } from './hooks/useFeatures';
+
+function SidebarToggle() {
+  const { open, setOpen } = useSidebar();
+  
+  return (
+    <Button
+      onClick={() => setOpen(!open)}
+      className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full border bg-background shadow-md hover:bg-accent p-0"
+      variant="ghost"
+    >
+      {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+    </Button>
+  );
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showAccount, setShowAccount] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(authManager.isAuthenticated());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
@@ -155,7 +169,8 @@ function App() {
         }}
         onLogout={handleLogout}
       />
-      <SidebarInset>
+      <SidebarInset className="relative">
+        <SidebarToggle />
         <SiteHeader activeTab={activeTab}>
           <div className="flex items-center gap-2 ml-auto">
             <Button onClick={() => setShowBookingForm(true)} size="sm">

@@ -14,16 +14,24 @@ const MAINTENANCE_DB_ID = import.meta.env.VITE_NOTION_MAINTENANCE_DB_ID || '';
 const VEHICLES_DB_ID = import.meta.env.VITE_NOTION_BUSES_DB_ID || '';
 
 async function queryDatabase(databaseId: string) {
-  const response = await fetch(`${BACKEND_URL}/api/databases/${databaseId}/query`, {
-    method: 'POST',
-    headers: authManager.getAuthHeaders()
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Database query failed: ${response.status}`);
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: authManager.getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`FRONTEND: API call failed - DB: ${databaseId}, Status: ${response.status}, Error: ${errorText}`);
+      throw new Error(`Database query failed: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    const errorMsg = typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error);
+    console.error(`FRONTEND: Fetch error - DB: ${databaseId}, Error: ${errorMsg}`);
+    throw error;
   }
-  
-  return await response.json();
 }
 
 export async function getVehicles(): Promise<Vehicle[]> {
