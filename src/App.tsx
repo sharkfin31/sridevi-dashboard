@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppSidebar, SiteHeader } from './components/layout';
+import { AppSidebar } from './components/layout';
 import { Footer } from './components/layout/footer';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { GoogleCalendar, BookingsView, MaintenanceView, AnalyticsView } from './components/views';
@@ -12,19 +12,35 @@ import { CalendarEvent, Booking, Maintenance } from './types';
 import { getBookings, getMaintenance } from './lib/notion';
 import { SidebarProvider, SidebarInset, useSidebar } from './components/ui/sidebar';
 import { Button } from './components/ui/button';
-import { Plus, Wrench, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Wrench, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
 import { useFeatures } from './hooks/useFeatures';
 
 function SidebarToggle() {
-  const { open, setOpen } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
   
   return (
     <Button
-      onClick={() => setOpen(!open)}
-      className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full border bg-background shadow-md hover:bg-accent p-0"
+      onClick={toggleSidebar}
+      className={`hidden md:flex fixed top-1/2 -translate-y-1/2 z-40 h-8 w-8 rounded-full border bg-background shadow-md hover:bg-accent transition-all duration-200 ease-in-out items-center justify-center ${
+        open ? 'left-[calc(var(--sidebar-width)-1rem)]' : 'left-8'
+      }`}
       variant="ghost"
     >
       {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+    </Button>
+  );
+}
+
+function MobileMenuToggle() {
+  const { openMobile, toggleSidebar } = useSidebar();
+  
+  return (
+    <Button
+      onClick={toggleSidebar}
+      className="md:hidden h-9 w-9 p-0"
+      variant="ghost"
+    >
+      {openMobile ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
     </Button>
   );
 }
@@ -172,8 +188,10 @@ function App() {
       />
       <SidebarInset className="relative">
         <SidebarToggle />
-        <SiteHeader activeTab={activeTab}>
-          <div className="flex items-center gap-2 ml-auto">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <MobileMenuToggle />
+          <h1 className="text-lg font-semibold md:ml-8 flex-1">{activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'calendar' ? 'Scheduler' : activeTab === 'bookings' ? 'Booking Management' : activeTab === 'maintenance' ? 'Maintenance Tracking' : activeTab === 'analytics' ? 'Analytics & Reports' : activeTab === 'settings' ? 'Settings' : activeTab === 'account' ? 'Account Management' : 'Bus Transport Dashboard'}</h1>
+          <div className="flex items-center gap-2">
             <Button onClick={() => setShowBookingForm(true)} size="sm">
               <Plus className="h-4 w-4" />
               New Booking
@@ -183,7 +201,7 @@ function App() {
               Schedule Maintenance
             </Button>
           </div>
-        </SiteHeader>
+        </header>
         
         <div className="flex flex-1 flex-col">
           <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">

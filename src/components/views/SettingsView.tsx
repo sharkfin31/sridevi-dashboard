@@ -12,11 +12,6 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Settings</h2>
-        <p className="text-muted-foreground">Manage system settings and preferences</p>
-      </div>
-
       <div className="grid gap-6 md:grid-cols-2">
         <SystemStatusCard
           systemInfo={systemInfo}

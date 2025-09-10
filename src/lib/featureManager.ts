@@ -35,6 +35,7 @@ class FeatureManager {
       GOOGLE_CALENDAR: flagsmith.hasFeature('google_calendar'),
       NOTION_CALENDAR: flagsmith.hasFeature('notion_calendar'),
       ADMIN_MODE: flagsmith.hasFeature('admin_mode'),
+      PASS_CHANGE_ENABLED: flagsmith.hasFeature('pass_change_enabled'),
     };
     
     this.notifyListeners();

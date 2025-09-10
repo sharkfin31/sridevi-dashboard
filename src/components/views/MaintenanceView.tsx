@@ -12,7 +12,6 @@ import { DateRange } from 'react-day-picker';
 import { Search, Filter, Wrench, Clock, CalendarIcon, X } from 'lucide-react';
 import { Maintenance } from '@/types';
 import { MaintenanceModal } from '@/components/modals/MaintenanceModal';
-import { updateMaintenance } from '@/lib/notion';
 
 interface MaintenanceViewProps {
   maintenance: Maintenance[];
@@ -25,7 +24,7 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
-  const [editingStatus, setEditingStatus] = useState<string | null>(null);
+
   const itemsPerPage = 10;
 
   const filteredMaintenance = maintenance.filter((item) => {
@@ -52,15 +51,7 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const handleStatusUpdate = async (maintenanceId: string, newStatus: string) => {
-    try {
-      await updateMaintenance(maintenanceId, { status: newStatus as any });
-      onMaintenanceUpdated?.();
-      setEditingStatus(null);
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  };
+
 
   const totalPages = Math.ceil(filteredMaintenance.length / itemsPerPage);
   const paginatedMaintenance = filteredMaintenance.slice(
@@ -70,7 +61,7 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
 
   const maintenanceStats = {
     total: maintenance.length,
-    scheduled: maintenance.filter((m) => m.status === 'Pending').length,
+    pending: maintenance.filter((m) => m.status === 'Pending').length,
     inProgress: maintenance.filter((m) => m.status === 'In Progress').length,
     completed: maintenance.filter((m) => m.status === 'Done').length,
   };
@@ -90,11 +81,11 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <Clock className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{maintenanceStats.scheduled}</div>
+            <div className="text-2xl font-bold">{maintenanceStats.pending}</div>
           </CardContent>
         </Card>
 
@@ -167,10 +158,10 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Done">Done</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -199,31 +190,16 @@ export function MaintenanceView({ maintenance, onMaintenanceUpdated }: Maintenan
                     <TableCell>{item.description}</TableCell>
                     <TableCell>₹{item.cost.toLocaleString()}</TableCell>
                     <TableCell>{new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {editingStatus === item.id ? (
-                        <Select value={item.status} onValueChange={(value) => handleStatusUpdate(item.id, value)}>
-                          <SelectTrigger className="w-32 h-6">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="in-progress">In Progress</SelectItem>
-                            <SelectItem value="done">Done</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge 
-                          className={
-                            item.status === 'Done' ? 'bg-green-100 text-green-800 border-green-200 cursor-pointer' :
-                            item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-pointer' :
-                            'bg-gray-100 text-gray-800 border-gray-200 cursor-pointer'
-                          }
-                          onClick={() => setEditingStatus(item.id)}
-                        >
-                          {item.status === 'In Progress' ? 'In Progress' :
-                           item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                        </Badge>
-                      )}
+                    <TableCell>
+                      <Badge 
+                        className={
+                          item.status === 'Done' ? 'bg-green-100 text-green-800 border-green-200' :
+                          item.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                          'bg-gray-100 text-gray-800 border-gray-200'
+                        }
+                      >
+                        {item.status}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}

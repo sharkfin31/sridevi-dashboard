@@ -190,7 +190,7 @@ export function BookingsView() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="Confirmed">Confirmed</SelectItem>
                 <SelectItem value="In Tour">In Tour</SelectItem>
                 <SelectItem value="Pending Payment">Pending Payment</SelectItem>

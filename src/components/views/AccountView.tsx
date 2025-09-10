@@ -3,13 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { User, Lock } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import { authManager } from '@/lib/auth';
 import { getInitials } from '@/lib/utils/formatters';
+import { useFeatures } from '@/hooks/useFeatures';
 
 export function AccountView() {
+  const { features } = useFeatures();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -95,7 +97,6 @@ export function AccountView() {
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center gap-3 mb-6">
               <Avatar className="h-20 w-20">
-                <AvatarImage src="/avatars/admin.jpg" alt={userInfo.name} />
                 <AvatarFallback className="text-xl">
                   {getInitials(userInfo.name)}
                 </AvatarFallback>
@@ -158,13 +159,14 @@ export function AccountView() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Security Settings
-            </CardTitle>
-          </CardHeader>
+        {features.PASS_CHANGE_ENABLED && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Security Settings
+              </CardTitle>
+            </CardHeader>
           <CardContent className="space-y-4">
             {!isChangingPassword ? (
               <div className="p-4 bg-muted rounded-lg">
@@ -296,8 +298,9 @@ export function AccountView() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

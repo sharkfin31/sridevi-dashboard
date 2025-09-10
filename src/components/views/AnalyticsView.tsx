@@ -288,21 +288,19 @@ export function AnalyticsView({ bookings, maintenance }: AnalyticsViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="relative flex items-center justify-end">
-        <div className="absolute left-1/2 transform -translate-x-1/2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-96">
-            <TabsList className="grid w-full grid-cols-2 h-10">
-              <TabsTrigger value="operations" className="flex items-center gap-2 text-sm">
-                <Bus className="h-3 w-3" />
-                Operations
-              </TabsTrigger>
-              <TabsTrigger value="revenue" className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-3 w-3" />
-                Revenue
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-80">
+          <TabsList className="grid w-full grid-cols-2 h-10">
+            <TabsTrigger value="operations" className="flex items-center gap-2 text-sm">
+              <Bus className="h-3 w-3" />
+              Operations
+            </TabsTrigger>
+            <TabsTrigger value="revenue" className="flex items-center gap-2 text-sm">
+              <DollarSign className="h-3 w-3" />
+              Revenue
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-md p-1 w-32">
             <Button
@@ -326,7 +324,7 @@ export function AnalyticsView({ bookings, maintenance }: AnalyticsViewProps) {
             <YearPicker selectedYear={selectedYear} onYearSelect={setSelectedYear} />
           ) : (
             <Select value={selectedMonth?.toString() || ''} onValueChange={(value) => setSelectedMonth(value ? parseInt(value) : null)}>
-              <SelectTrigger className="w-40 h-10 text-sm">
+              <SelectTrigger className="w-32 h-10 text-sm">
                 <SelectValue placeholder="Select month" />
               </SelectTrigger>
               <SelectContent>

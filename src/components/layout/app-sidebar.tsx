@@ -8,6 +8,7 @@ import {
   Settings,
   Wrench,
   TrendingUp,
+  X,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -17,7 +18,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 import { authManager } from "@/lib/auth"
 
@@ -25,7 +28,6 @@ const data = {
   user: {
     name: "Admin",
     email: "admin@sridevi.com",
-    avatar: "/avatars/admin.jpg",
   },
   navMain: [
     {
@@ -78,6 +80,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ activeTab, onTabChange, isAdminMode = false, onAccountClick, onLogout, ...props }: AppSidebarProps) {
+  const { isMobile, toggleSidebar } = useSidebar()
   const navItems = data.navMain
     .filter(item => !item.adminOnly || isAdminMode)
     .map(item => ({
@@ -96,6 +99,16 @@ export function AppSidebar({ activeTab, onTabChange, isAdminMode = false, onAcco
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold">Sri Devi Bus Transports</span>
           </div>
+          {isMobile && (
+            <Button
+              onClick={toggleSidebar}
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -105,8 +118,7 @@ export function AppSidebar({ activeTab, onTabChange, isAdminMode = false, onAcco
         <NavUser 
           user={{
             name: authManager.getUser()?.name || data.user.name,
-            email: authManager.getUser()?.email || data.user.email,
-            avatar: data.user.avatar
+            email: authManager.getUser()?.email || data.user.email
           }} 
           onAccountClick={onAccountClick} 
           onLogout={onLogout} 
