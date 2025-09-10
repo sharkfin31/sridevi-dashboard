@@ -288,19 +288,21 @@ export function AnalyticsView({ bookings, maintenance }: AnalyticsViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-80">
-          <TabsList className="grid w-full grid-cols-2 h-10">
-            <TabsTrigger value="operations" className="flex items-center gap-2 text-sm">
-              <Bus className="h-3 w-3" />
-              Operations
-            </TabsTrigger>
-            <TabsTrigger value="revenue" className="flex items-center gap-2 text-sm">
-              <DollarSign className="h-3 w-3" />
-              Revenue
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="relative flex items-center justify-between md:justify-end gap-4">
+        <div className="md:absolute md:left-1/2 md:transform md:-translate-x-1/2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-80">
+            <TabsList className="grid w-full grid-cols-2 h-10">
+              <TabsTrigger value="operations" className="flex items-center gap-2 text-sm">
+                <Bus className="h-3 w-3" />
+                Operations
+              </TabsTrigger>
+              <TabsTrigger value="revenue" className="flex items-center gap-2 text-sm">
+                <DollarSign className="h-3 w-3" />
+                Revenue
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-md p-1 w-32">
             <Button
