@@ -24,7 +24,7 @@ export function useSystemInfo() {
   const fetchSystemInfo = async () => {
     try {
       const startTime = Date.now();
-      const response = await fetch('http://localhost:3001/api/test');
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/test`);
       const endTime = Date.now();
       const data = await response.json();
       setSystemInfo(data);
@@ -38,7 +38,7 @@ export function useSystemInfo() {
   const syncNow = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/sync-now', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/sync-now`, {
         method: 'POST',
         headers: authManager.getAuthHeaders()
       });
@@ -54,7 +54,7 @@ export function useSystemInfo() {
   const clearCache = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/cache/clear', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/cache/clear`, {
         method: 'POST',
         headers: authManager.getAuthHeaders()
       });
