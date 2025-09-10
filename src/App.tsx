@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AppSidebar, SiteHeader } from './components/layout';
+import { Footer } from './components/layout/footer';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { GoogleCalendar, BookingsView, MaintenanceView, AnalyticsView } from './components/views';
 import { SettingsView } from './components/views/SettingsView';
@@ -188,6 +189,7 @@ function App() {
           <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             {showAccount ? <AccountView /> : renderContent()}
           </div>
+          <Footer />
         </div>
       </SidebarInset>
 
