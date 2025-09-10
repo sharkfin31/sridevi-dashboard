@@ -23,6 +23,21 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Sri Devi Bus Transports API Server',
+    version: '1.0.0',
+    endpoints: [
+      '/api/health',
+      '/api/databases/:id/query',
+      '/api/pages',
+      '/api/pages/:id',
+      '/api/blocks/:id/children'
+    ]
+  });
+});
+
 const notion = new Client({ auth: process.env.NOTION_KEY });
 // const googleSync = new GoogleCalendarSync(); // Disabled
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes

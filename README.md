@@ -1,4 +1,4 @@
-# Sridevi Bus Transport Dashboard
+# Sri Devi Bus Transports Dashboard
 
 A modern, secure dashboard for managing bus transport operations with role-based access control, booking management, and maintenance scheduling. Built with Vite.js, React, TypeScript, and shadcn/ui, with Notion as the backend database.
 
